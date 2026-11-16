@@ -1,3 +1,11 @@
+const fs = require("node:fs");
+const path = require("node:path");
+
+const envFile = path.join(__dirname, "..", ".env");
+if (fs.existsSync(envFile)) {
+    process.loadEnvFile(envFile);
+}
+
 const DEFAULT_TEST_ENDPOINT = "http://localhost:8787/test";
 
 function promptForToken() {
@@ -61,7 +69,7 @@ async function checkEndpoint(endpoint) {
 async function main() {
     const endpoint = process.env.TEST_ENDPOINT || DEFAULT_TEST_ENDPOINT;
     await checkEndpoint(endpoint);
-    const token = await promptForToken();
+    const token = process.env.DEV_AUTH_TOKEN || await promptForToken();
     if (!token) {
         throw new Error("Bearer token cannot be empty.");
     }

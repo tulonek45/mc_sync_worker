@@ -32,5 +32,5 @@ export async function handleDiscord(req: Request, env: Env): Promise<Response> {
     const user: UserRecord = { id, name };
     await env.USERS.put(`tok:${tokenHash}`, JSON.stringify(user));
     await env.USERS.put(`user:${id}`, tokenHash);
-    return reply(`Your token (keep it private):\n\`${token}\``);
+    return reply(`Your token (keep it private):\n\`\`\`\n${token}\n\`\`\``);
 }
