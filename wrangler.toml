@@ -1,0 +1,16 @@
+name = "mcsync"
+main = "src/index.ts"
+compatibility_date = "2026-11-16"
+
+[[r2_buckets]]
+binding = "WORLD"
+bucket_name = "minecraft-server-test"
+
+[[kv_namespaces]]
+binding = "USERS"
+id = "c09cc7291c914b2b9841d86e21988484"
+
+[vars]
+R2_ACCOUNT_ID = "2ab71365908fe72b6e1f70f168a5d24b"
+R2_BUCKET = "minecraft-server-test"
+KEEP_VERSIONS = "1"
