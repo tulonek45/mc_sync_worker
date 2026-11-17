@@ -3,11 +3,16 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "wrangler dev",
-    "dev:remote": "wrangler dev --remote",
-    "typecheck": "tsc --noEmit",
-    "tunnel": "npx cloudflared --url http://localhost:8787",
+    "dev:e2e": "wrangler dev --env e2e --remote",
+    "deploy": "wrangler deploy --env=\"\"",
+    "deploy:production": "wrangler deploy --env=\"\"",
+    "deploy:e2e": "wrangler deploy --env e2e",
     "register:discord": "node scripts/register_commands.cjs",
-    "test:auth": "node scripts/test_auth.cjs"
+    "typecheck": "tsc --noEmit",
+    "test:auth": "node test/e2e/test_auth.cjs",
+    "test:latest": "node test/e2e/test_latest.cjs",
+    "test:upload": "node test/e2e/test_upload.cjs",
+    "test:commit": "node test/e2e/test_commit.cjs"
   },
   "dependencies": {
     "aws4fetch": "^1.0.20",
