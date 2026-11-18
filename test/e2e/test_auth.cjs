@@ -1,17 +1,12 @@
-const { checkEndpoint, getBearerToken, getEndpoint } = require("./helpers.cjs");
+const { checkEndpoint, getBearerToken, getEndpoint, getHeaders } = require("./helpers.cjs");
 
 async function main() {
     const endpoint = getEndpoint("/test");
     await checkEndpoint(endpoint);
-    const token = await getBearerToken();
-    if (!token) {
-        throw new Error("Bearer token cannot be empty.");
-    }
+    const token = getBearerToken();
 
     const response = await fetch(endpoint, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
+        headers: getHeaders(token),
         signal: AbortSignal.timeout(10000)
     });
     const body = await response.text();

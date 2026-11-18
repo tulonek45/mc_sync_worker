@@ -9,6 +9,7 @@ if (fs.existsSync(envFile)) {
 
 const DEFAULT_TEST_ENDPOINT = "http://localhost:8787";
 const TEST_BUCKET = "minecraft-server-test";
+const DEFAULT_SESSION = `session-default`
 
 function getEndpoint(pathname) {
     const configuredEndpoint = process.env.TEST_ENDPOINT || DEFAULT_TEST_ENDPOINT;
@@ -34,55 +35,6 @@ async function checkEndpoint(endpoint) {
     }
 }
 
-function promptForToken() {
-    process.stdout.write("Bearer token: ");
-
-    if (!process.stdin.isTTY) {
-        return new Promise((resolve, reject) => {
-            const chunks = [];
-            process.stdin.on("data", chunk => chunks.push(chunk));
-            process.stdin.on("end", () => resolve(Buffer.concat(chunks).toString("utf8").trim()));
-            process.stdin.on("error", reject);
-        });
-    }
-
-    return new Promise((resolve, reject) => {
-        const input = process.stdin;
-        let token = "";
-
-        const cleanup = () => {
-            input.removeListener("data", onData);
-            input.setRawMode(false);
-            input.pause();
-            process.stdout.write("\n");
-        };
-
-        const onData = chunk => {
-            for (const byte of chunk) {
-                if (byte === 3 || byte === 4) {
-                    cleanup();
-                    reject(new Error("Token prompt cancelled."));
-                    return;
-                }
-                if (byte === 10 || byte === 13) {
-                    cleanup();
-                    resolve(token);
-                    return;
-                }
-                if (byte === 8 || byte === 127) {
-                    token = token.slice(0, -1);
-                } else {
-                    token += String.fromCharCode(byte);
-                }
-            }
-        };
-
-        input.setRawMode(true);
-        input.resume();
-        input.on("data", onData);
-    });
-}
-
 async function promptForText(question) {
     const interface_ = readline.createInterface({ input: process.stdin, output: process.stdout });
     try {
@@ -92,8 +44,41 @@ async function promptForText(question) {
     }
 }
 
-async function getBearerToken() {
-    return process.env.DEV_AUTH_TOKEN || await promptForToken();
+function getBearerToken() {
+    const token = process.env.DEV_AUTH_TOKEN_1
+    if (!token) {
+        throw new Error("DEV_AUTH_TOKEN_1 not found.");
+    }
+    return token
 }
 
-module.exports = { assertTestBucketUrl, checkEndpoint, getBearerToken, getEndpoint, promptForText };
+async function getBearerTokenForUser(action) {
+    const selection = await promptForText(`Choose user 1 or 2 to ${action}: `);
+    if (selection !== "1" && selection !== "2") {
+        throw new Error("Choose user 1 or 2.");
+    }
+
+    const token = process.env[`DEV_AUTH_TOKEN_${selection}`];
+    if (!token) {
+        throw new Error(`DEV_AUTH_TOKEN_${selection} not found.`);
+    }
+    return { userNumber: Number(selection), token };
+}
+
+function getHeaders(token) {
+    return {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "X-Session": DEFAULT_SESSION,
+    }
+}
+
+module.exports = {
+    assertTestBucketUrl,
+    checkEndpoint,
+    getBearerToken,
+    getBearerTokenForUser,
+    getEndpoint,
+    getHeaders,
+    promptForText,
+};

@@ -1,24 +1,19 @@
 const assert = require("node:assert/strict");
-const { assertTestBucketUrl, checkEndpoint, getBearerToken, getEndpoint } = require("./helpers.cjs");
+const { assertTestBucketUrl, checkEndpoint, getBearerTokenForUser, getEndpoint, getHeaders } = require("./helpers.cjs");
 
 async function main() {
     const uploadUrlEndpoint = getEndpoint("/upload-url");
     const commitEndpoint = getEndpoint("/commit");
     
     await checkEndpoint(uploadUrlEndpoint);
-    const token = await getBearerToken();
-    if (!token) {
-        throw new Error("Bearer token cannot be empty.");
-    }
+    const { token } = await getBearerTokenForUser("commit");
 
     const uploadUrlResponse = await fetch(uploadUrlEndpoint, {
         method: "POST",
-        headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-        },
+        headers: getHeaders(token),
         signal: AbortSignal.timeout(10000),
     });
+    
     if (!uploadUrlResponse.ok) {
         throw new Error(`Requesting upload URL failed (HTTP ${uploadUrlResponse.status}): ${await uploadUrlResponse.text()}`);
     }
@@ -52,10 +47,7 @@ async function main() {
 
     const commitResponse = await fetch(commitEndpoint, {
         method: "POST",
-        headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-        },
+        headers: getHeaders(token),
         body: JSON.stringify({ key: uploadInfo.key }),
         signal: AbortSignal.timeout(10000),
     });

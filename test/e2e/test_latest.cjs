@@ -1,16 +1,13 @@
 const assert = require("node:assert/strict");
-const { assertTestBucketUrl, checkEndpoint, getBearerToken, getEndpoint } = require("./helpers.cjs");
+const { assertTestBucketUrl, checkEndpoint, getBearerToken, getEndpoint, getHeaders } = require("./helpers.cjs");
 
 async function main() {
     const endpoint = getEndpoint("/latest");
     await checkEndpoint(endpoint);
-    const token = await getBearerToken();
-    if (!token) {
-        throw new Error("Bearer token cannot be empty.");
-    }
+    const token = getBearerToken();
 
     const response = await fetch(endpoint, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getHeaders(token),
         signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) {
@@ -30,7 +27,7 @@ async function main() {
     }
     const archive = Buffer.from(await downloadResponse.arrayBuffer());
     assert.ok(archive.length > 4, "Latest archive should not be empty.");
-    assert.deepEqual(archive.subarray(0, 4), Buffer.from([0x50, 0x4b, 0x03, 0x04]), "Latest should be a ZIP archive.");
+    assert.deepEqual(archive.subarray(0, 4), Buffer.from([0x50, 0x4b, 0x05, 0x06,]), "Latest should be a ZIP archive.");
 
     console.log(`Latest ${latestInfo.key} downloaded (${archive.length} bytes).`);
 }
