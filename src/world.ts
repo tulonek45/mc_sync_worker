@@ -2,7 +2,7 @@ import type { Env, UserRecord } from "./types";
 import { presign } from "./r2";
 import { json } from "./response";
 
-export const get_latest = async (env: Env) => {
+export async function getLatest(env: Env): Promise<Response> {
     const pointer = await env.WORLD.get("latest.json");
     if (!pointer) return json({ key: null });
     const { key, ts, by } = await pointer.json<{ key: string; ts: number; by: string }>();
@@ -10,13 +10,13 @@ export const get_latest = async (env: Env) => {
 }
 
 
-export const upload_url = async (env: Env) => {
+export async function uploadUrl(env: Env, user: UserRecord): Promise<Response> {
     const key = `worlds/${Date.now()}.zip`;
     return json({ key, url: await presign(env, "PUT", key, 3600) });
 }
 
 
-export const commit_world = async (req: Request, env: Env, user: UserRecord) => {
+export async function commitWorld(req: Request, env: Env, user: UserRecord): Promise<Response> {
     const body = await req.json<{ key?: unknown }>();
     if (typeof body.key !== "string" || !body.key.startsWith("worlds/")) {
         return json({ error: "invalid key" }, 400);
