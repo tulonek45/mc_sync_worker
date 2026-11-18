@@ -1,6 +1,7 @@
 export interface Env {
     WORLD: R2Bucket;
     USERS: KVNamespace;
+    LOCK: DurableObjectNamespace
     R2_ACCOUNT_ID: string;
     R2_BUCKET: string;
     R2_ACCESS_KEY_ID: string;
@@ -13,6 +14,10 @@ export interface Env {
 export interface UserRecord {
     id: string;
     name: string;
+} 
+
+export interface SessionUser extends UserRecord {
+    session: string;
 }
 
 export interface DiscordInteraction {
@@ -28,3 +33,7 @@ export interface DiscordInteraction {
         name: string;
     };
 }
+
+export type LockOp = "acquire" | "heartbeat" | "check" | "release";
+export interface LockRequest { op: LockOp; id: string; name: string; session: string; ttl?: number }
+export interface LockState { id: string; name: string; session: string; ttl: number; exp: number }

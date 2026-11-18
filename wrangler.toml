@@ -1,16 +1,46 @@
 name = "mcsync"
 main = "src/index.ts"
 compatibility_date = "2026-11-16"
+keep_vars = true
 
 [[r2_buckets]]
 binding = "WORLD"
-bucket_name = "minecraft-server-test"
+bucket_name = "minecraft-server"
 
 [[kv_namespaces]]
 binding = "USERS"
 id = "c09cc7291c914b2b9841d86e21988484"
 
+[durable_objects]
+bindings = [{ name = "LOCK", class_name = "Lock" }]
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Lock"]
+
 [vars]
 R2_ACCOUNT_ID = "2ab71365908fe72b6e1f70f168a5d24b"
-R2_BUCKET = "minecraft-server-test"
+R2_BUCKET = "minecraft-server"
 KEEP_VERSIONS = "1"
+
+[env.e2e]
+name = "mcsync-e2e"
+
+[[env.e2e.r2_buckets]]
+binding = "WORLD"
+bucket_name = "minecraft-server-test"
+
+[[env.e2e.kv_namespaces]]
+binding = "USERS"
+id = "02ad6af95aaa403a9e01c701e09ed8be"
+
+[env.e2e.durable_objects]
+bindings = [{ name = "LOCK", class_name = "Lock" }]
+
+[[env.e2e.migrations]]
+tag = "v1"
+new_sqlite_classes = ["Lock"]
+
+[env.e2e.vars]
+R2_ACCOUNT_ID = "2ab71365908fe72b6e1f70f168a5d24b"
+R2_BUCKET = "minecraft-server-test"
+KEEP_VERSIONS = "3"

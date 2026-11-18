@@ -3,11 +3,22 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "wrangler dev",
-    "dev:remote": "wrangler dev --remote",
-    "typecheck": "tsc --noEmit",
-    "tunnel": "npx cloudflared --url http://localhost:8787",
+    "dev:e2e": "wrangler dev --env e2e --remote",
+    "deploy": "wrangler deploy --env=\"\"",
+    "deploy:e2e": "wrangler deploy --env e2e",
     "register:discord": "node scripts/register_commands.cjs",
-    "test:auth": "node scripts/test_auth.cjs"
+    "typecheck": "tsc --noEmit",
+    "test": "jest --config jest.config.cjs",
+    "seed:e2e:auth": "node scripts/seed_e2e_auth.cjs",
+    "e2e:auth": "node test/e2e/test_auth.cjs",
+    "e2e:latest": "node test/e2e/test_latest.cjs",
+    "e2e:commit": "node test/e2e/test_commit.cjs",
+    "e2e:lock": "node test/e2e/test_lock.cjs",
+    "e2e:lock:a": "node test/e2e/test_lock.cjs a",
+    "e2e:lock:h": "node test/e2e/test_lock.cjs h",
+    "e2e:lock:r": "node test/e2e/test_lock.cjs r",
+    "log": "wrangler tail --env=\"\"",
+    "log:e2e": "wrangler tail --env e2e"
   },
   "dependencies": {
     "aws4fetch": "^1.0.20",
@@ -15,6 +26,10 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261116.1",
+    "@swc/core": "^1.16.22",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.5.2",
     "typescript": "^7.0.2",
     "wrangler": "^4.163.0"
   }
