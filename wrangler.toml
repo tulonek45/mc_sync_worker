@@ -24,7 +24,6 @@ KEEP_VERSIONS = "1"
 
 [env.e2e]
 name = "mcsync-e2e"
-keep_vars = true
 
 [[env.e2e.r2_buckets]]
 binding = "WORLD"

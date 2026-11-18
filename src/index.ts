@@ -22,15 +22,12 @@ export default {
         if (session.length < 8 || session.length > 64) return json({ error: "missing or invalid X-Session header" }, 400);
 
         const me = { id: user.id, name: user.name, session };
-         if (path === "/latest") return await getLatest(env);
+        if (path === "/latest") return await getLatest(env);
         if (path === "/upload-url") return await uploadUrl(env, me)
         if (path === "/commit" && req.method === "POST") return await commitWorld(req, env, me)
         if (path === "/heartbeat") return lockCall(env, { op: "heartbeat", ...me });
         if (path === "/release") return lockCall(env, { op: "release", ...me });
-        if (path === "/lock") {
-            const { ttl } = await req.json<{ ttl?: number }>().catch(() => ({ ttl: undefined }));
-            return lockCall(env, { op: "acquire", ...me, ttl });
-        }
+        if (path === "/lock") return lockCall(env, { op: "acquire", ...me, ...(await req.json<{ ttl?: number }>().catch(() => null))});
         return json({ error: "not found" }, 404);
     },
 } satisfies ExportedHandler<Env>;
