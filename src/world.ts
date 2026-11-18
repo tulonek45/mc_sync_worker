@@ -1,6 +1,7 @@
-import type { Env, UserRecord } from "./types";
+import type { Env, SessionUser } from "./types";
 import { presign } from "./r2";
 import { json } from "./response";
+import { lockCall } from "./lock";
 
 export async function getLatest(env: Env): Promise<Response> {
     const pointer = await env.WORLD.get("latest.json");
@@ -10,13 +11,19 @@ export async function getLatest(env: Env): Promise<Response> {
 }
 
 
-export async function uploadUrl(env: Env, user: UserRecord): Promise<Response> {
+export async function uploadUrl(env: Env, user: SessionUser): Promise<Response> {
+    const lockCheck = await lockCall(env, { op: "check", ...user });
+    if (!lockCheck.ok) return lockCheck;
+
     const key = `worlds/${Date.now()}.zip`;
     return json({ key, url: await presign(env, "PUT", key, 3600) });
 }
 
 
-export async function commitWorld(req: Request, env: Env, user: UserRecord): Promise<Response> {
+export async function commitWorld(req: Request, env: Env, user: SessionUser): Promise<Response> {
+    const lockCheck = await lockCall(env, { op: "check", ...user });
+    if (!lockCheck.ok) return lockCheck;
+
     const body = await req.json<{ key?: unknown }>();
     if (typeof body.key !== "string" || !body.key.startsWith("worlds/")) {
         return json({ error: "invalid key" }, 400);
