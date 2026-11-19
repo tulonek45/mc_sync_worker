@@ -21,6 +21,7 @@
     "e2e:lock:a": "node test/e2e/test_lock.cjs a",
     "e2e:lock:h": "node test/e2e/test_lock.cjs h",
     "e2e:lock:r": "node test/e2e/test_lock.cjs r",
+    "e2e:profile": "node test/e2e/test_profile.cjs",
     "log": "wrangler tail --env=\"\"",
     "log:e2e": "wrangler tail --env e2e"
   },
