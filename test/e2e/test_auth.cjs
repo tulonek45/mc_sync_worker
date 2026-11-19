@@ -1,20 +1,13 @@
-const { checkEndpoint, getBearerToken, getEndpoint, getHeaders } = require("./helpers.cjs");
+const { checkEndpoint, getBearerToken, getEndpoint, getHeaders, fetchJson } = require("./helpers.cjs");
 
 async function main() {
-    const endpoint = getEndpoint("/test");
-    await checkEndpoint(endpoint);
+    await checkEndpoint();
+    const endpoint = getEndpoint("/me");
     const token = getBearerToken();
 
-    const response = await fetch(endpoint, {
-        headers: getHeaders(token),
-        signal: AbortSignal.timeout(10000)
-    });
-    const body = await response.text();
+    const response = await fetchJson(endpoint, token);
+    console.log(response)
     
-    console.log(`HTTP ${response.status}`);
-    if (body) {
-        console.log(body);
-    }
 }
 
 main().catch(error => {

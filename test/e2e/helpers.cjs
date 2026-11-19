@@ -1,11 +1,15 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const readline = require("node:readline/promises");
+const crypto = require("node:crypto");
 
 const envFile = path.join(__dirname, "..", "..", ".env");
 if (fs.existsSync(envFile)) {
     process.loadEnvFile(envFile);
 }
+
+const DEFAULT_PROFILE = "test"
+const DOWNLOAD_DIR = path.resolve(__dirname, "..", "..", "tmp");
 
 const DEFAULT_TEST_ENDPOINT = "http://localhost:8787";
 const TEST_BUCKET = "minecraft-server-test";
@@ -26,7 +30,7 @@ function assertTestBucketUrl(value) {
     return url;
 }
 
-async function checkEndpoint(endpoint) {
+async function checkEndpoint(endpoint = getEndpoint("")) {
     try {
         await fetch(endpoint, { signal: AbortSignal.timeout(5000) });
     } catch (error) {
@@ -73,6 +77,52 @@ function getHeaders(token) {
     }
 }
 
+function writeFileAtomic(dest, data) {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    const tmp = `${dest}.part.${process.pid}`;
+    fs.writeFileSync(tmp, data);
+    fs.renameSync(tmp, dest);
+}
+
+async function fetchJson(endpoint, token, method = "GET", timeoutMs = 10000, body = undefined) {
+    const headers = {
+        ...getHeaders(token),
+        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+    };
+
+    const res = await fetch(endpoint, {
+        method,
+        headers,
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) {
+        throw new Error(`Requesting ${endpoint} failed (HTTP ${res.status}): ${await res.text()}`);
+    }
+    return res.json();
+}
+
+async function downloadBuffer(url, timeoutMs = 60000) {
+    assertTestBucketUrl(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    if (!res.ok) {
+        throw new Error(`Download failed (HTTP ${res.status}): ${await res.text()}`);
+    }
+    return Buffer.from(await res.arrayBuffer());
+}
+
+function sha256(buf) {
+    return crypto.createHash("sha256").update(buf).digest("hex");
+}
+
+function verifySha256(data, expected, label) {
+    if (!expected) return;
+    const actual = sha256(data);
+    if (actual !== expected) {
+        throw new Error(`Hash mismatch for ${label}: expected ${expected}, got ${actual}`);
+    }
+}
+
 module.exports = {
     assertTestBucketUrl,
     checkEndpoint,
@@ -81,4 +131,11 @@ module.exports = {
     getEndpoint,
     getHeaders,
     promptForText,
+    fetchJson,
+    writeFileAtomic,
+    downloadBuffer,
+    sha256,
+    verifySha256,
+    DEFAULT_PROFILE,
+    DOWNLOAD_DIR,
 };

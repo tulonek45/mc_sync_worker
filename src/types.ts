@@ -53,6 +53,20 @@ export interface ProfileManifest {
     properties: Record<string, string>;
 }
 
-export type LockOp = "acquire" | "heartbeat" | "check" | "release";
-export interface LockRequest { op: LockOp; id: string; name: string; session: string; ttl?: number }
-export interface LockState { id: string; name: string; session: string; ttl: number; exp: number }
+export type LockOp = "acquire" | "heartbeat" | "check" | "release" | "state";
+
+export interface LockRequest {
+    op: LockOp;
+    id: string;
+    name: string;
+    session: string;
+    profile: string;
+    ttl?: number
+}
+
+export interface LockState {
+    id: string; name: string;
+    session: string;
+    ttl: number;
+    exp: number
+}

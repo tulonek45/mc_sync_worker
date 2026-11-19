@@ -6,10 +6,7 @@ const { parseArgs } = require("node:util");
 
 const { values: args } = parseArgs({
     options: {
-        dir: { type: "string", default: "mc_server" },
-        properties: { type: "string" },
-        base: { type: "string", default: "profile/base.json" },
-        out: { type: "string", default: "profile/manifest.json" },
+        profile: { type: "string" },
         exclude: { type: "string", default: "" },
     },
 });
@@ -68,6 +65,14 @@ const SKIP_TOP_LEVEL_DIRS = new Set([
 ]);
 
 const fail = (message) => { throw new Error(`error: ${message}`); };
+
+
+function validateProfileName(name) {
+    if (!name || typeof name !== "string" || !/^[a-zA-Z0-9_-]+$/.test(name)) {
+        fail("invalid or missing --profile (use letters, numbers, underscores, or hyphens)");
+    }
+}
+
 
 function readJson(file) {
     try {
@@ -192,15 +197,20 @@ async function sha256File(file) {
 
 
 async function main() {
-    const serverDir = path.resolve(args.dir);
-    const outputFile = path.resolve(args.out);
-    const propertiesFile = path.resolve(args.properties ?? path.join(serverDir, "server.properties"));
+    validateProfileName(args.profile);
+
+    const profileRoot = path.join(__dirname, "..", "profiles", args.profile);
+    const serverDir = path.join(profileRoot, "server")
+    const baseFile = path.join(profileRoot, "base.json");
+    const outputFile = path.join(profileRoot, "manifest.json");
+    const propertiesFile = path.join(serverDir, "server.properties");
+
     if (!fs.existsSync(serverDir) || !fs.statSync(serverDir).isDirectory())
         fail(`not a directory: ${serverDir}`);
     if (!fs.existsSync(propertiesFile))
         fail(`server.properties not found: ${propertiesFile}`);
 
-    const base = readJson(path.resolve(args.base));
+    const base = readJson(baseFile);
     const server = normalizeServer(base.server);
     const extraExcludes = args.exclude.split(",").map((value) => value.trim()).filter(Boolean);
 

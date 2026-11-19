@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "server": {
+    "type": "vanilla",
+    "mc_version": "26.3",
+    "url": "https://piston-data.mojang.com/v1/objects/33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c/server.jar",
+    "sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c"
+  },
+  "properties": {
+    "allow-flight": "true",
+    "difficulty": "hard",
+    "enforce-secure-profile": "true",
+    "enforce-whitelist": "false",
+    "entity-broadcast-range-percentage": "100",
+    "force-gamemode": "false",
+    "gamemode": "survival",
+    "generate-structures": "true",
+    "hardcore": "false",
+    "level-name": "world",
+    "level-seed": "",
+    "level-type": "minecraft:normal",
+    "max-players": "20",
+    "max-tick-time": "60000",
+    "max-world-size": "29999984",
+    "motd": "Pellemaailma",
+    "network-compression-threshold": "256",
+    "online-mode": "true",
+    "op-permission-level": "4",
+    "player-idle-timeout": "0",
+    "spawn-protection": "16",
+    "view-distance": "10",
+    "white-list": "false"
+  },
+  "files": [
+    {
+      "path": "test.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

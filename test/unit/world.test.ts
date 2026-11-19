@@ -10,6 +10,7 @@ const { presign } = jest.requireMock<typeof import("../../src/r2")>("../../src/r
 const mockLockCall = jest.mocked(lockCall);
 const mockPresign = jest.mocked(presign);
 const user: SessionUser = { id: "user-1", name: "Test User", session: "world-test-session" };
+const profile = "test";
 
 function createWorld() {
     const objects = new Map<string, string>();
@@ -62,11 +63,11 @@ describe("world operations", () => {
         const denial = Response.json({ ok: false, error: "no lock" }, { status: 409 });
         mockLockCall.mockResolvedValue(denial);
 
-        const response = await uploadUrl(env, user);
+        const response = await uploadUrl(env, user, profile);
 
         expect(response).toBe(denial);
         expect(mockPresign).not.toHaveBeenCalled();
-        expect(mockLockCall).toHaveBeenCalledWith(env, { op: "check", ...user });
+        expect(mockLockCall).toHaveBeenCalledWith(env, { op: "check", ...user, profile });
     });
 
     test("uploadUrl signs a timestamped ZIP key when the lock is held", async () => {
@@ -74,14 +75,14 @@ describe("world operations", () => {
         const now = new Date("2026-01-02T03:04:05Z");
         jest.useFakeTimers().setSystemTime(now);
 
-        const response = await uploadUrl(env, user);
+        const response = await uploadUrl(env, user, profile);
 
         expect(response.status).toBe(200);
         expect(await response.json()).toEqual({
-            key: `worlds/${now.getTime()}.zip`,
+            key: `worlds/${profile}/${now.getTime()}.zip`,
             url: "https://signed.example/world",
         });
-        expect(mockPresign).toHaveBeenCalledWith(env, "PUT", `worlds/${now.getTime()}.zip`, 3600);
+        expect(mockPresign).toHaveBeenCalledWith(env, "PUT", `worlds/${profile}/${now.getTime()}.zip`, 3600);
     });
 
     test("commitWorld stops on lock denial", async () => {
@@ -89,7 +90,7 @@ describe("world operations", () => {
         const denial = Response.json({ ok: false, error: "no lock" }, { status: 409 });
         mockLockCall.mockResolvedValue(denial);
 
-        const response = await commitWorld(commitRequest("worlds/world.zip"), env, user);
+        const response = await commitWorld(commitRequest("worlds/test/world.zip"), env, user, profile);
 
         expect(response).toBe(denial);
         expect(bucket.head).not.toHaveBeenCalled();
@@ -99,22 +100,33 @@ describe("world operations", () => {
     test("commitWorld rejects keys outside the worlds prefix", async () => {
         const { env, bucket } = createWorld();
 
-        const response = await commitWorld(commitRequest("private/world.zip"), env, user);
+        const response = await commitWorld(commitRequest("private/world.zip"), env, user, profile);
 
         expect(response.status).toBe(400);
         expect(await response.json()).toEqual({ error: "invalid key" });
         expect(bucket.head).not.toHaveBeenCalled();
     });
 
+    test("commitWorld rejects keys for another profile", async () => {
+        const { env, bucket } = createWorld();
+
+        const response = await commitWorld(commitRequest("worlds/other/world.zip"), env, user, profile);
+
+        expect(response.status).toBe(400);
+        expect(await response.json()).toEqual({ error: "invalid key" });
+        expect(bucket.head).not.toHaveBeenCalled();
+        expect(bucket.put).not.toHaveBeenCalled();
+    });
+
     test("commitWorld rejects an upload that is missing from R2", async () => {
         const { env, bucket } = createWorld();
         const log = jest.spyOn(console, "log").mockImplementation(() => {});
 
-        const response = await commitWorld(commitRequest("worlds/missing.zip"), env, user);
+        const response = await commitWorld(commitRequest("worlds/test/missing.zip"), env, user, profile);
 
         expect(response.status).toBe(400);
         expect(await response.json()).toEqual({ error: "object missing" });
-        expect(bucket.head).toHaveBeenCalledWith("worlds/missing.zip");
+        expect(bucket.head).toHaveBeenCalledWith("worlds/test/missing.zip");
         expect(bucket.put).not.toHaveBeenCalled();
         log.mockRestore();
     });
@@ -122,44 +134,44 @@ describe("world operations", () => {
     test("commitWorld updates latest and deletes archives outside retention", async () => {
         const { env, objects, bucket } = createWorld();
         env.KEEP_VERSIONS = "2";
-        objects.set("worlds/a.zip", "a");
-        objects.set("worlds/b.zip", "b");
-        objects.set("worlds/d.zip", "d");
-        objects.set("worlds/z.zip", "z");
+        objects.set("worlds/test/a.zip", "a");
+        objects.set("worlds/test/b.zip", "b");
+        objects.set("worlds/test/d.zip", "d");
+        objects.set("worlds/test/z.zip", "z");
         jest.useFakeTimers().setSystemTime(new Date("2026-01-02T03:04:05Z"));
 
-        const response = await commitWorld(commitRequest("worlds/z.zip"), env, user);
+        const response = await commitWorld(commitRequest("worlds/test/z.zip"), env, user, profile);
 
         expect(response.status).toBe(200);
         expect(await response.json()).toEqual({ ok: true });
-        expect(JSON.parse(objects.get("latest.json")!)).toEqual({
-            key: "worlds/z.zip",
+        expect(JSON.parse(objects.get("latest/test.json")!)).toEqual({
+            key: "worlds/test/z.zip",
             ts: Date.now(),
             by: user.name,
         });
-        expect(bucket.delete).toHaveBeenCalledWith(["worlds/b.zip", "worlds/a.zip"]);
-        expect(objects.has("worlds/a.zip")).toBe(false);
-        expect(objects.has("worlds/b.zip")).toBe(false);
-        expect(objects.has("worlds/d.zip")).toBe(true);
-        expect(objects.has("worlds/z.zip")).toBe(true);
+        expect(bucket.delete).toHaveBeenCalledWith(["worlds/test/b.zip", "worlds/test/a.zip"]);
+        expect(objects.has("worlds/test/a.zip")).toBe(false);
+        expect(objects.has("worlds/test/b.zip")).toBe(false);
+        expect(objects.has("worlds/test/d.zip")).toBe(true);
+        expect(objects.has("worlds/test/z.zip")).toBe(true);
     });
 
     test("getLatest returns an empty pointer when no latest object exists", async () => {
         const { env, bucket } = createWorld();
 
-        const response = await getLatest(env);
+        const response = await getLatest(env, profile);
 
         expect(await response.json()).toEqual({ key: null });
         expect(mockPresign).not.toHaveBeenCalled();
-        expect(bucket.get).toHaveBeenCalledWith("latest.json");
+        expect(bucket.get).toHaveBeenCalledWith("latest/test.json");
     });
 
     test("getLatest signs a download URL for the committed pointer", async () => {
         const { env, objects } = createWorld();
-        const pointer = { key: "worlds/world.zip", ts: 123, by: user.name };
-        objects.set("latest.json", JSON.stringify(pointer));
+        const pointer = { key: "worlds/test/world.zip", ts: 123, by: user.name };
+        objects.set("latest/test.json", JSON.stringify(pointer));
 
-        const response = await getLatest(env);
+        const response = await getLatest(env, profile);
 
         expect(await response.json()).toEqual({
             ...pointer,
@@ -175,14 +187,14 @@ describe("world operations", () => {
             .mockResolvedValueOnce("https://signed.example/upload")
             .mockResolvedValueOnce("https://signed.example/download");
 
-        const uploadResponse = await uploadUrl(env, user);
+        const uploadResponse = await uploadUrl(env, user, profile);
         const upload = await uploadResponse.json() as { key: string; url: string };
         objects.set(upload.key, "uploaded archive");
 
-        const commitResponse = await commitWorld(commitRequest(upload.key), env, user);
+        const commitResponse = await commitWorld(commitRequest(upload.key), env, user, profile);
         expect(commitResponse.status).toBe(200);
 
-        const latestResponse = await getLatest(env);
+        const latestResponse = await getLatest(env, profile);
 
         expect(await latestResponse.json()).toEqual({
             key: upload.key,

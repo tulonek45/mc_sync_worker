@@ -1,7 +1,7 @@
 import { Env, LockRequest, LockState } from "./types";
 
 export function lockCall(env: Env, body: LockRequest): Promise<Response> {
-    return env.LOCK.get(env.LOCK.idFromName("world")).fetch("https://lock/", { method: "POST", body: JSON.stringify(body) });
+    return env.LOCK.get(env.LOCK.idFromName(body.profile)).fetch("https://lock/", { method: "POST", body: JSON.stringify(body) });
 }
 
 
@@ -43,6 +43,9 @@ export class Lock implements DurableObject {
         if (op === "release") {
             if (cur && mine(cur, body)) await this.state.storage.delete("lock");
             return Response.json({ ok: true });
+        }
+        if (op === "state") {
+            return Response.json({ ok: true, holder: cur?.name})
         }
         return Response.json({ error: "bad op" }, { status: 400 });
   }
