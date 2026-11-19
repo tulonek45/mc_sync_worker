@@ -4,6 +4,7 @@ import { handleDiscord } from "./discord";
 import { json } from "./response";
 import { getLatest, commitWorld, uploadUrl } from "./world";
 import { lockCall, Lock } from "./lock";
+import { getProfile } from "./profile";
 
 export { Lock };
 
@@ -23,6 +24,7 @@ export default {
 
         const me = { id: user.id, name: user.name, session };
         if (path === "/latest") return await getLatest(env);
+        if (path === "/profile") return await getProfile(env);
         if (path === "/upload-url") return await uploadUrl(env, me)
         if (path === "/commit" && req.method === "POST") return await commitWorld(req, env, me)
         if (path === "/heartbeat") return lockCall(env, { op: "heartbeat", ...me });
