@@ -1,8 +1,10 @@
 import type { Env, ProfileManifest } from "./types";
 import { json } from "./response";
 import { presign } from "./r2";
+import { lockCall } from "./lock";
 
 const SHA256_RE = /^[0-9a-f]{64}$/;
+const PROFILE_RE = /^[a-z0-9-]{1,32}$/;
 
 // Paths the profile must never write
 const RESERVED_NAMES = new Set([
@@ -60,8 +62,8 @@ export function validateManifest(raw: unknown): ProfileManifest | string {
 }
 
 
-export async function getProfile(env: Env): Promise<Response> {
-    const obj = await env.WORLD.get("profile/manifest.json");
+export async function getProfile(env: Env, profile: string): Promise<Response> {
+    const obj = await env.WORLD.get(`profiles/${profile}/manifest.json`);
     if (!obj) return json({ error: "no profile published" }, 404);
 
     let raw: unknown;
@@ -79,4 +81,30 @@ export async function getProfile(env: Env): Promise<Response> {
     );
 
     return json({ ...manifest, files });
+}
+
+
+export async function listProfiles(env: Env): Promise<Response> {
+    const listing = await env.WORLD.list({ prefix: "profiles/", delimiter: "/" });
+    const names = listing.delimitedPrefixes
+        .map(p => p.slice("profiles/".length, -1))
+        .filter(n => PROFILE_RE.test(n));
+
+    const profiles = await Promise.all(names.map(async profile => {
+        const obj = await env.WORLD.get(`profiles/${profile}/manifest.json`);
+        if (!obj) return null;
+        const manifest = validateManifest(await obj.json().catch(() => null));
+        if (typeof manifest === "string") return null;
+        const lock = await lockCall(env, { op: "state", id: "", name: "", session: "", profile })
+            .then(r => r.json<{ holder?: string }>())
+            .catch(() => null);
+
+        return {
+            name: profile,
+            mc_version: manifest.server.mc_version,
+            type: manifest.server.type,
+            locked_by: lock?.holder ?? null,
+        };
+    }));
+    return json({ profiles: profiles.filter(Boolean) });
 }
