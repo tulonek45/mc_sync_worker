@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const readline = require("node:readline/promises");
+const crypto = require("node:crypto");
 
 const envFile = path.join(__dirname, "..", "..", ".env");
 if (fs.existsSync(envFile)) {

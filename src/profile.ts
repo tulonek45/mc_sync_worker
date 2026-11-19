@@ -76,7 +76,7 @@ export async function getProfile(env: Env, profile: string): Promise<Response> {
     const files = await Promise.all(
         manifest.files.map(async f => ({
             ...f,
-            url: await presign(env, "GET", `profile/files/${f.sha256}`, 900),
+            url: await presign(env, "GET", `profiles/${profile}/files/${f.sha256}`, 900),
         }))
     );
 
