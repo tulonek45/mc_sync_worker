@@ -1,38 +1,39 @@
 const assert = require("node:assert/strict");
-const { assertTestBucketUrl, checkEndpoint, getBearerToken, getEndpoint, getHeaders } = require("./helpers.cjs");
+const path = require("node:path");
+const { checkEndpoint,
+    getBearerToken,
+    getEndpoint,
+    downloadBuffer,
+    fetchJson,
+    verifySha256,
+    writeFileAtomic,
+    DEFAULT_PROFILE,
+    DOWNLOAD_DIR,
+} = require("./helpers.cjs");
 
 async function main() {
-    const endpoint = getEndpoint("/latest");
+    const endpoint = getEndpoint(`/p/${DEFAULT_PROFILE}/latest`);
     await checkEndpoint(endpoint);
     const token = getBearerToken();
 
-    const response = await fetch(endpoint, {
-        headers: getHeaders(token),
-        signal: AbortSignal.timeout(10000),
-    });
-    if (!response.ok) {
-        throw new Error(`Requesting latest failed (HTTP ${response.status}): ${await response.text()}`);
-    }
-
-    const latestInfo = await response.json();
+    const latestInfo = await fetchJson(endpoint, token);
     if (!latestInfo.key || !latestInfo.url) {
         throw new Error("No committed latest object found.");
     }
     assert.match(latestInfo.key, /^worlds\/.+\.zip$/, "Latest should point at a world archive.");
-    assertTestBucketUrl(latestInfo.url);
 
-    const downloadResponse = await fetch(latestInfo.url, { signal: AbortSignal.timeout(300000) });
-    if (!downloadResponse.ok) {
-        throw new Error(`Downloading latest failed (HTTP ${downloadResponse.status}): ${await downloadResponse.text()}`);
-    }
-    const archive = Buffer.from(await downloadResponse.arrayBuffer());
+    const archive = await downloadBuffer(latestInfo.url, 300000);
     assert.ok(archive.length > 4, "Latest archive should not be empty.");
-    assert.deepEqual(archive.subarray(0, 4), Buffer.from([0x50, 0x4b, 0x05, 0x06,]), "Latest should be a ZIP archive.");
+    verifySha256(archive, latestInfo.sha256, latestInfo.key);
 
-    console.log(`Latest ${latestInfo.key} downloaded (${archive.length} bytes).`);
+    const fileName = path.basename(latestInfo.key);
+    const dest = path.resolve(DOWNLOAD_DIR, fileName);
+    writeFileAtomic(dest, archive);
+
+    console.log(`Latest ${latestInfo.key} downloaded to ${dest} (${archive.length} bytes).`);
 }
 
-main().catch(error => {
+main().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
 });
