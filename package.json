@@ -6,6 +6,10 @@
     "dev:e2e": "wrangler dev --env e2e --remote",
     "deploy": "wrangler deploy --env=\"\"",
     "deploy:e2e": "wrangler deploy --env e2e",
+    "generate:profile": "node scripts/generate_profile.cjs --dir mc_server --base profile/base.json --out profile/manifest.json",
+    "publish:profile": "node scripts/publish_profile.cjs --dir mc_server --manifest profile/manifest.json",
+    "publish:profile:dr": "node scripts/publish_profile.cjs --dir mc_server --manifest profile/manifest.json --dry-run",
+    "publish:profile:e2e": "node scripts/publish_profile.cjs --dir mc_server --env e2e --manifest profile/manifest.json",
     "register:discord": "node scripts/register_commands.cjs",
     "typecheck": "tsc --noEmit",
     "test": "jest --config jest.config.cjs",
@@ -17,6 +21,7 @@
     "e2e:lock:a": "node test/e2e/test_lock.cjs a",
     "e2e:lock:h": "node test/e2e/test_lock.cjs h",
     "e2e:lock:r": "node test/e2e/test_lock.cjs r",
+    "e2e:profile": "node test/e2e/test_profile.cjs",
     "log": "wrangler tail --env=\"\"",
     "log:e2e": "wrangler tail --env e2e"
   },

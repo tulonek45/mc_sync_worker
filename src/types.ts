@@ -34,6 +34,25 @@ export interface DiscordInteraction {
     };
 }
 
+export interface ProfileFileEntry {
+    path: string;     // relative to the server instance folder
+    sha256: string;   // lowercase hex; also the R2 object name
+}
+
+export interface ProfileManifest {
+    version: number;
+    server: {
+        type: string;
+        mc_version: string;
+        build?: number;
+        sha256?: string;
+        sha1?: string;
+        url: string;
+    };
+    files: ProfileFileEntry[];
+    properties: Record<string, string>;
+}
+
 export type LockOp = "acquire" | "heartbeat" | "check" | "release";
 export interface LockRequest { op: LockOp; id: string; name: string; session: string; ttl?: number }
 export interface LockState { id: string; name: string; session: string; ttl: number; exp: number }
