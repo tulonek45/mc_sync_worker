@@ -6,10 +6,9 @@
     "dev:e2e": "wrangler dev --env e2e --remote",
     "deploy": "wrangler deploy --env=\"\"",
     "deploy:e2e": "wrangler deploy --env e2e",
-    "generate:profile": "node scripts/generate_profile.cjs --dir mc_server --base profile/base.json --out profile/manifest.json",
-    "publish:profile": "node scripts/publish_profile.cjs --dir mc_server --manifest profile/manifest.json",
-    "publish:profile:dr": "node scripts/publish_profile.cjs --dir mc_server --manifest profile/manifest.json --dry-run",
-    "publish:profile:e2e": "node scripts/publish_profile.cjs --dir mc_server --env e2e --manifest profile/manifest.json",
+    "generate:profile": "node scripts/generate_profile.cjs --profile vanilla",
+    "publish:profile": "node scripts/publish_profile.cjs --profile vanilla",
+    "publish:profile:e2e": "node scripts/publish_profile.cjs --env e2e --profile vanilla",
     "register:discord": "node scripts/register_commands.cjs",
     "typecheck": "tsc --noEmit",
     "test": "jest --config jest.config.cjs",
@@ -26,6 +25,7 @@
     "log:e2e": "wrangler tail --env e2e"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1172.0",
     "aws4fetch": "^1.0.20",
     "discord-interactions": "^4.4.0"
   },
