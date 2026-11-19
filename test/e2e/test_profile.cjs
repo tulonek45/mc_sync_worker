@@ -23,9 +23,10 @@ async function downloadFiles(profile, outDir) {
 }
 
 async function main() {
+    await checkEndpoint();
     const profileEndpoint = getEndpoint(`/p/${DEFAULT_PROFILE}/profile`);
     const profilesEndpoint = getEndpoint(`/profiles`);
-    await checkEndpoint(profileEndpoint);
+    
     const token = getBearerToken();
 
     const profiles = await fetchJson(profilesEndpoint, token);

@@ -27,10 +27,10 @@ async function uploadArchive(url, data, timeoutMs = 300000) {
 }
 
 async function main() {
+    await checkEndpoint();
     const uploadUrlEndpoint = getEndpoint(`/p/${DEFAULT_PROFILE}/upload-url`);
     const commitEndpoint = getEndpoint(`/p/${DEFAULT_PROFILE}/commit`);
 
-    await checkEndpoint(uploadUrlEndpoint);
     const { token } = await getBearerTokenForUser("commit");
 
     const uploadInfo = await fetchJson(uploadUrlEndpoint, token);

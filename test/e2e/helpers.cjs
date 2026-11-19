@@ -30,7 +30,7 @@ function assertTestBucketUrl(value) {
     return url;
 }
 
-async function checkEndpoint(endpoint) {
+async function checkEndpoint(endpoint = getEndpoint("")) {
     try {
         await fetch(endpoint, { signal: AbortSignal.timeout(5000) });
     } catch (error) {

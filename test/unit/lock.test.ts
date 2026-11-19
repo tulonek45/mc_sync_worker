@@ -22,6 +22,8 @@ function request(body: unknown): Request {
     });
 }
 
+const profile = "test";
+
 describe("Lock Durable Object", () => {
     afterEach(() => {
         jest.useRealTimers();
@@ -29,7 +31,7 @@ describe("Lock Durable Object", () => {
 
     test("acquires a lease and allows the same owner to reacquire it", async () => {
         const { lock, values } = createLock();
-        const body = { op: "acquire", id: "one", name: "One", session: "session-one" };
+        const body = { op: "acquire", id: "one", name: "One", session: "session-one", profile };
 
         const firstResponse = await lock.fetch(request(body));
         const reacquireResponse = await lock.fetch(request(body));
@@ -42,9 +44,9 @@ describe("Lock Durable Object", () => {
 
     test("rejects a competing owner and reports the current holder", async () => {
         const { lock } = createLock();
-        await lock.fetch(request({ op: "acquire", id: "one", name: "One" }));
+        await lock.fetch(request({ op: "acquire", id: "one", name: "One", profile }));
 
-        const response = await lock.fetch(request({ op: "acquire", id: "two", name: "Two" }));
+        const response = await lock.fetch(request({ op: "acquire", id: "two", name: "Two", profile }));
 
         expect(response.status).toBe(409);
         expect(await response.json()).toEqual({ ok: false, holder: "One" });
@@ -52,10 +54,10 @@ describe("Lock Durable Object", () => {
 
     test("checks ownership and rejects a different owner", async () => {
         const { lock } = createLock();
-        await lock.fetch(request({ op: "acquire", id: "one", name: "One" }));
+        await lock.fetch(request({ op: "acquire", id: "one", name: "One", profile }));
 
-        const ownerResponse = await lock.fetch(request({ op: "check", id: "one", name: "One" }));
-        const otherResponse = await lock.fetch(request({ op: "check", id: "two", name: "Two" }));
+        const ownerResponse = await lock.fetch(request({ op: "check", id: "one", name: "One", profile }));
+        const otherResponse = await lock.fetch(request({ op: "check", id: "two", name: "Two", profile }));
 
         expect(ownerResponse.status).toBe(200);
         expect(await ownerResponse.json()).toEqual({ ok: true });
@@ -66,12 +68,12 @@ describe("Lock Durable Object", () => {
     test("heartbeats extend the lease only for its owner", async () => {
         const { lock, values } = createLock();
         jest.useFakeTimers().setSystemTime(new Date("2026-01-01T00:00:00Z"));
-        await lock.fetch(request({ op: "acquire", id: "one", name: "One" }));
+        await lock.fetch(request({ op: "acquire", id: "one", name: "One", profile }));
         const initialExpiration = values.get("lock")?.exp;
         jest.advanceTimersByTime(10_000);
 
-        const otherResponse = await lock.fetch(request({ op: "heartbeat", id: "two", name: "Two" }));
-        const ownerResponse = await lock.fetch(request({ op: "heartbeat", id: "one", name: "One" }));
+        const otherResponse = await lock.fetch(request({ op: "heartbeat", id: "two", name: "Two", profile }));
+        const ownerResponse = await lock.fetch(request({ op: "heartbeat", id: "one", name: "One", profile }));
 
         expect(otherResponse.status).toBe(409);
         expect(ownerResponse.status).toBe(200);
@@ -80,24 +82,35 @@ describe("Lock Durable Object", () => {
 
     test("release clears only the matching owner's lease", async () => {
         const { lock, values } = createLock();
-        await lock.fetch(request({ op: "acquire", id: "one", name: "One" }));
+        await lock.fetch(request({ op: "acquire", id: "one", name: "One", profile }));
 
-        const otherResponse = await lock.fetch(request({ op: "release", id: "two", name: "Two" }));
+        const otherResponse = await lock.fetch(request({ op: "release", id: "two", name: "Two", profile }));
         expect(otherResponse.status).toBe(200);
         expect(values.has("lock")).toBe(true);
 
-        const ownerResponse = await lock.fetch(request({ op: "release", id: "one", name: "One" }));
+        const ownerResponse = await lock.fetch(request({ op: "release", id: "one", name: "One", profile }));
         expect(ownerResponse.status).toBe(200);
         expect(values.has("lock")).toBe(false);
+    });
+
+    test("reports the current holder and no holder when the lease is idle", async () => {
+        const { lock } = createLock();
+
+        const idleResponse = await lock.fetch(request({ op: "state", id: "", name: "", profile }));
+        await lock.fetch(request({ op: "acquire", id: "one", name: "One", profile }));
+        const heldResponse = await lock.fetch(request({ op: "state", id: "", name: "", profile }));
+
+        expect(await idleResponse.json()).toEqual({ ok: true });
+        expect(await heldResponse.json()).toEqual({ ok: true, holder: "One" });
     });
 
     test("allows a new owner to acquire an expired lease", async () => {
         const { lock, values } = createLock();
         jest.useFakeTimers().setSystemTime(new Date("2026-01-01T00:00:00Z"));
-        await lock.fetch(request({ op: "acquire", id: "one", name: "One", ttl: 60 }));
+        await lock.fetch(request({ op: "acquire", id: "one", name: "One", profile, ttl: 60 }));
         jest.advanceTimersByTime(60_001);
 
-        const response = await lock.fetch(request({ op: "acquire", id: "two", name: "Two" }));
+        const response = await lock.fetch(request({ op: "acquire", id: "two", name: "Two", profile }));
 
         expect(response.status).toBe(200);
         expect(values.get("lock")?.id).toBe("two");
@@ -108,17 +121,17 @@ describe("Lock Durable Object", () => {
         const now = new Date("2026-01-01T00:00:00Z");
         jest.useFakeTimers().setSystemTime(now);
 
-        await lock.fetch(request({ op: "acquire", id: "one", name: "One", ttl: 1 }));
+        await lock.fetch(request({ op: "acquire", id: "one", name: "One", profile, ttl: 1 }));
         expect(values.get("lock")?.exp).toBe(now.getTime() + 60_000);
 
-        await lock.fetch(request({ op: "acquire", id: "one", name: "One", ttl: 1000 }));
+        await lock.fetch(request({ op: "acquire", id: "one", name: "One", profile, ttl: 1000 }));
         expect(values.get("lock")?.exp).toBe(now.getTime() + 900_000);
     });
 
     test("rejects unknown operations", async () => {
         const { lock } = createLock();
 
-        const response = await lock.fetch(request({ op: "other", id: "one", name: "One" }));
+        const response = await lock.fetch(request({ op: "other", id: "one", name: "One", profile }));
 
         expect(response.status).toBe(400);
         expect(await response.json()).toEqual({ error: "bad op" });

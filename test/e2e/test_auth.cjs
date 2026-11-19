@@ -1,8 +1,8 @@
 const { checkEndpoint, getBearerToken, getEndpoint, getHeaders, fetchJson } = require("./helpers.cjs");
 
 async function main() {
+    await checkEndpoint();
     const endpoint = getEndpoint("/me");
-    await checkEndpoint(endpoint);
     const token = getBearerToken();
 
     const response = await fetchJson(endpoint, token);

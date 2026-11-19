@@ -12,8 +12,9 @@ const { checkEndpoint,
 } = require("./helpers.cjs");
 
 async function main() {
+    await checkEndpoint();
     const endpoint = getEndpoint(`/p/${DEFAULT_PROFILE}/latest`);
-    await checkEndpoint(endpoint);
+
     const token = getBearerToken();
 
     const latestInfo = await fetchJson(endpoint, token);

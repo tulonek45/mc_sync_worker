@@ -16,7 +16,7 @@ const OPERATION_PATHS = {
 };
 
 async function main() {
-    await checkEndpoint(getEndpoint("/lock"));
+    await checkEndpoint();
 
     // Check if an argument was passed via CLI, otherwise prompt
     const arg = process.argv[2];
