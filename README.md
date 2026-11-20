@@ -202,12 +202,3 @@ src/
 scripts/        profile generate/publish, Discord registration, e2e seeding
 test/e2e/       end-to-end tests (run against the e2e environment)
 ```
-
-## Security notes
-
-- Tokens are random 256-bit values; only their SHA-256 hash is stored.
-- The R2 S3 credentials are Worker secrets and are never sent to clients.
-- Profile paths are validated server-side and must be re-validated by the client before writing to disk.
-- Profile and world keys are built from a validated profile name, and `commit` only accepts keys inside the caller's own profile prefix.
-- Removing someone's Discord role blocks new tokens but does not invalidate an existing one. To revoke immediately, delete the user's `tok:<hash>` entry in KV (or add a live role check).
-- Anything in a profile is readable by every authorized player.
