@@ -2,7 +2,7 @@ name: Deploy e2e
 
 on:
   push:
-    branches: [mian]
+    branches: [main]
 
 concurrency:
   group: e2e
