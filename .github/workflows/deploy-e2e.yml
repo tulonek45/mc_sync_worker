@@ -2,9 +2,7 @@ name: Deploy e2e
 
 on:
   push:
-    branches:
-      - mian
-      - feat/info-ci
+    branches: [mian]
 
 concurrency:
   group: e2e
@@ -51,9 +49,9 @@ jobs:
         run: |
           npm run e2e:lock -- acquire 1
           npm run e2e:profile
+          npm run e2e:lock -- heartbeat 1
           npm run e2e:commit -- 1
           npm run e2e:latest
-          npm run e2e:lock -- heartbeat 1
           npm run e2e:lock -- release 1
 
       - name: Ensure lock is released on failure
