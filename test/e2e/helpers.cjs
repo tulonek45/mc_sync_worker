@@ -8,12 +8,12 @@ if (fs.existsSync(envFile)) {
     process.loadEnvFile(envFile);
 }
 
-const DEFAULT_PROFILE = "test"
+const DEFAULT_PROFILE = "test";
 const DOWNLOAD_DIR = path.resolve(__dirname, "..", "..", "tmp");
 
 const DEFAULT_TEST_ENDPOINT = "http://localhost:8787";
 const TEST_BUCKET = "minecraft-server-test";
-const DEFAULT_SESSION = `session-default`
+const DEFAULT_SESSION = "session-default";
 
 function getEndpoint(pathname) {
     const configuredEndpoint = process.env.TEST_ENDPOINT || DEFAULT_TEST_ENDPOINT;
@@ -32,7 +32,8 @@ function assertTestBucketUrl(value) {
 
 async function checkEndpoint(endpoint = getEndpoint("")) {
     try {
-        await fetch(endpoint, { signal: AbortSignal.timeout(5000) });
+        const res = await fetch(endpoint, { signal: AbortSignal.timeout(5000) });
+        return res;
     } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
         throw new Error(`Test endpoint is unavailable at ${endpoint}: ${detail}`, { cause: error });
@@ -40,6 +41,9 @@ async function checkEndpoint(endpoint = getEndpoint("")) {
 }
 
 async function promptForText(question) {
+    if (!process.stdin.isTTY) {
+        throw new Error(`Cannot prompt "${question}" when stdin is not a TTY. Pass CLI args or env vars.`);
+    }
     const interface_ = readline.createInterface({ input: process.stdin, output: process.stdout });
     try {
         return (await interface_.question(question)).trim();
@@ -49,24 +53,29 @@ async function promptForText(question) {
 }
 
 function getBearerToken() {
-    const token = process.env.DEV_AUTH_TOKEN_1
-    if (!token) {
+    const token = process.env.DEV_AUTH_TOKEN_1;
+    if (!token || typeof token !== "string" || token.trim().length === 0) {
         throw new Error("DEV_AUTH_TOKEN_1 not found.");
     }
-    return token
+    return token.trim();
 }
 
-async function getBearerTokenForUser(action) {
-    const selection = await promptForText(`Choose user 1 or 2 to ${action}: `);
+async function getBearerTokenForUser(action, explicitUser = undefined) {
+    const selection = explicitUser
+        ? String(explicitUser).trim()
+        : process.env.E2E_USER
+            ? String(process.env.E2E_USER).trim()
+            : await promptForText(`Choose user 1 or 2 to ${action}: `);
+
     if (selection !== "1" && selection !== "2") {
-        throw new Error("Choose user 1 or 2.");
+        throw new Error(`Choose user 1 or 2 (received "${selection}").`);
     }
 
-    const token = process.env[`DEV_AUTH_TOKEN_${selection}`];
-    if (!token) {
+    const token = process.env[`DEV_AUTH_TOKEN_${selection}`] || (selection === "1" ? process.env.DEV_AUTH_TOKEN_1 : undefined);
+    if (!token || typeof token !== "string" || token.trim().length === 0) {
         throw new Error(`DEV_AUTH_TOKEN_${selection} not found.`);
     }
-    return { userNumber: Number(selection), token };
+    return { userNumber: Number(selection), token: token.trim() };
 }
 
 function getHeaders(token) {
@@ -74,7 +83,7 @@ function getHeaders(token) {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
         "X-Session": DEFAULT_SESSION,
-    }
+    };
 }
 
 function writeFileAtomic(dest, data) {

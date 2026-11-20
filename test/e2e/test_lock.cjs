@@ -1,3 +1,4 @@
+const assert = require("node:assert/strict");
 const { checkEndpoint, getBearerTokenForUser, getEndpoint, promptForText, fetchJson, DEFAULT_PROFILE } = require("./helpers.cjs");
 
 const OPERATION_MAP = {
@@ -15,13 +16,19 @@ const OPERATION_PATHS = {
     release: `/p/${DEFAULT_PROFILE}/release`,
 };
 
+function assertLockResult(operation, result) {
+    assert.ok(result && typeof result === "object", `${operation} response should be a JSON object.`);
+    assert.equal(result.ok, true, `${operation} response should have ok: true.`);
+}
+
 async function main() {
     await checkEndpoint();
 
-    // Check if an argument was passed via CLI, otherwise prompt
-    const arg = process.argv[2];
-    const rawInput = arg
-        ? arg.toLowerCase()
+    const argOp = process.argv[2];
+    const argUser = process.argv[3];
+
+    const rawInput = argOp
+        ? argOp.toLowerCase()
         : (await promptForText("Choose lock operation ([a]cquire, [h]eartbeat, [r]elease): ")).toLowerCase();
 
     const operation = OPERATION_MAP[rawInput];
@@ -29,11 +36,13 @@ async function main() {
         throw new Error("Choose acquire, heartbeat, or release.");
     }
 
-    const { userNumber, token } = await getBearerTokenForUser(operation);
+    const { userNumber, token } = await getBearerTokenForUser(operation, argUser);
     const endpoint = getEndpoint(OPERATION_PATHS[operation]);
+    const payload = operation === "release" ? undefined : { ttl: 60 };
 
     try {
-        const result = await fetchJson(endpoint, token, "POST", 10000, { ttl: 60 });
+        const result = await fetchJson(endpoint, token, "POST", 10000, payload);
+        assertLockResult(operation, result);
         console.log(`${operation} succeeded as user ${userNumber}:`, result);
     } catch (err) {
         throw new Error(
