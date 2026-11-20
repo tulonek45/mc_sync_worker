@@ -1,5 +1,13 @@
 const assert = require("node:assert/strict");
-const { assertTestBucketUrl, checkEndpoint, getBearerTokenForUser, getEndpoint, fetchJson, DEFAULT_PROFILE } = require("./helpers.cjs");
+const {
+    assertTestBucketUrl,
+    checkEndpoint,
+    getBearerTokenForUser,
+    getEndpoint,
+    fetchJson,
+    sha256,
+    DEFAULT_PROFILE,
+} = require("./helpers.cjs");
 
 const EMPTY_ZIP_ARCHIVE = Buffer.from([
     0x50, 0x4b, 0x05, 0x06, // End of central directory signature (PK\x05\x06)
@@ -31,17 +39,28 @@ async function main() {
     const uploadUrlEndpoint = getEndpoint(`/p/${DEFAULT_PROFILE}/upload-url`);
     const commitEndpoint = getEndpoint(`/p/${DEFAULT_PROFILE}/commit`);
 
-    const { token } = await getBearerTokenForUser("commit");
+    const { token } = await getBearerTokenForUser("commit", process.argv[2]);
+    const archiveDigest = sha256(EMPTY_ZIP_ARCHIVE);
 
     const uploadInfo = await fetchJson(uploadUrlEndpoint, token);
-    if (typeof uploadInfo.key !== "string") {
-        throw new Error(`Upload URL response has an invalid key: ${JSON.stringify(uploadInfo)}`);
-    }
+    console.log(uploadInfo.key)
+    assert.ok(uploadInfo && typeof uploadInfo === "object", "Upload URL response should be an object.");
+    assert.equal(typeof uploadInfo.key, "string", `Upload URL response has an invalid key: ${JSON.stringify(uploadInfo)}`);
+    assert.match(uploadInfo.key, /^worlds\/[^/]+\/[^/]+\.zip$/, "Upload key should point at a worlds/*/*.zip archive.");
+    assert.equal(typeof uploadInfo.url, "string", "Upload URL response must include a signed upload url.");
 
     await uploadArchive(uploadInfo.url, EMPTY_ZIP_ARCHIVE);
 
-    const commitInfo = await fetchJson(commitEndpoint, token, "POST", 10000, { key: uploadInfo.key });
+    const commitInfo = await fetchJson(commitEndpoint, token, "POST", 10000, {
+        key: uploadInfo.key,
+        sha256: archiveDigest,
+    });
+    assert.ok(commitInfo && typeof commitInfo === "object", "Commit response should be an object.");
     assert.equal(commitInfo.ok, true, "Commit response should confirm success.");
+    if ("key" in commitInfo) {
+        assert.equal(commitInfo.key, uploadInfo.key, "Committed key should match uploaded key.");
+    }
+
     console.log(`Successfully uploaded and committed ${uploadInfo.key}`);
 }
 
